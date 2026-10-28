@@ -21,17 +21,20 @@ public class DashboardFrame extends JFrame {
         this.isAdmin = user instanceof Admin;
 
         setTitle("Dashboard - " + user.getUsername() + " (" + user.getRole() + ")");
-        setSize(780, 450);
+        setSize(900, 560);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         tabs = new JTabbedPane();
-        tabs.addTab("Vehicles", buildVehiclesTab()); // index 0
-        tabs.addTab("Rent a Car", buildRentTab()); // index 1
-        tabs.addTab(isAdmin ? "All Rentals" : "My Rentals", buildRentalsTab()); // index 2
-        if (isAdmin)
-            tabs.addTab("Add Vehicle", buildAddTab()); // index 3
-        add(tabs);
+        tabs.setFont(Theme.BOLD);
+        tabs.addTab("Vehicles", buildVehiclesTab());                              // index 0
+        tabs.addTab("Rent a Car", buildRentTab());                                // index 1
+        tabs.addTab(isAdmin ? "All Rentals" : "My Rentals", buildRentalsTab());   // index 2
+        if (isAdmin) tabs.addTab("Add Vehicle", buildAddTab());                   // index 3
+
+        add(Theme.header("Smart Car Rental", user.getUsername() + " (" + user.getRole() + ")"),
+                BorderLayout.NORTH);
+        add(tabs, BorderLayout.CENTER);
 
         refreshVehicles();
         refreshRentals();
@@ -46,11 +49,27 @@ public class DashboardFrame extends JFrame {
         JTextArea area = new JTextArea(r.generateInvoice());
         area.setEditable(false);
         area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
+        area.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         JOptionPane.showMessageDialog(this, area, "Invoice", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void error(String msg) {
         JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    // Bottom bar that holds the buttons
+    private JPanel buttonBar() {
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        bar.setBackground(Theme.BG);
+        return bar;
+    }
+
+    // A form panel with a light background and padding
+    private JPanel formPanel(int rows) {
+        JPanel p = new JPanel(new GridLayout(rows, 2, 12, 12));
+        p.setBackground(Theme.BG);
+        p.setBorder(BorderFactory.createEmptyBorder(30, 80, 30, 80));
+        return p;
     }
 
     // ---------- Vehicles tab ----------
@@ -64,12 +83,13 @@ public class DashboardFrame extends JFrame {
             }
         };
         vehicleTable = new JTable(vehicleModel);
+        Theme.styleTable(vehicleTable);
         p.add(new JScrollPane(vehicleTable), BorderLayout.CENTER);
 
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel bottom = buttonBar();
 
         if (isAdmin) {
-            JButton remove = new JButton("Remove selected");
+            JButton remove = Theme.button("Remove selected", Theme.DANGER);
             remove.addActionListener(e -> {
                 int row = vehicleTable.getSelectedRow();
                 if (row == -1) {
@@ -83,9 +103,9 @@ public class DashboardFrame extends JFrame {
             });
             bottom.add(remove);
         } else {
-            JTextField startField = new JTextField(8);
-            JTextField endField = new JTextField(8);
-            JButton book = new JButton("Book selected");
+            JTextField startField = new JTextField(LocalDate.now().toString(), 9);
+            JTextField endField = new JTextField(LocalDate.now().plusDays(3).toString(), 9);
+            JButton book = Theme.button("Book selected");
             bottom.add(new JLabel("Start (yyyy-mm-dd):"));
             bottom.add(startField);
             bottom.add(new JLabel("End:"));
@@ -131,14 +151,13 @@ public class DashboardFrame extends JFrame {
 
     // ---------- Rent a Car tab ----------
     private JPanel buildRentTab() {
-        JPanel p = new JPanel(new GridLayout(5, 2, 8, 8));
-        p.setBorder(BorderFactory.createEmptyBorder(30, 60, 30, 60));
+        JPanel p = formPanel(5);
 
         JTextField customerField = new JTextField(isAdmin ? "" : user.getUsername());
         customerField.setEditable(isAdmin);
         JTextField startField = new JTextField(LocalDate.now().toString());
         JTextField endField = new JTextField(LocalDate.now().plusDays(3).toString());
-        JButton rentBtn = new JButton("Rent this car");
+        JButton rentBtn = Theme.button("Rent this car", Theme.SUCCESS);
 
         p.add(new JLabel("Customer username:"));
         p.add(customerField);
@@ -200,11 +219,13 @@ public class DashboardFrame extends JFrame {
             }
         };
         rentalTable = new JTable(rentalModel);
+        Theme.styleTable(rentalTable);
+        Theme.colorStatus(rentalTable, 5);      // column 5 = Status
         p.add(new JScrollPane(rentalTable), BorderLayout.CENTER);
 
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel bottom = buttonBar();
 
-        JButton invoiceBtn = new JButton("Show invoice");
+        JButton invoiceBtn = Theme.button("Show invoice");
         invoiceBtn.addActionListener(e -> {
             int row = rentalTable.getSelectedRow();
             if (row == -1) {
@@ -216,14 +237,14 @@ public class DashboardFrame extends JFrame {
         bottom.add(invoiceBtn);
 
         if (isAdmin) {
-            JButton addRentalBtn = new JButton("Add rental");
+            JButton addRentalBtn = Theme.button("Add rental", Theme.SUCCESS);
             addRentalBtn.addActionListener(e -> tabs.setSelectedIndex(1));
-            JButton addCarBtn = new JButton("Add new car");
+            JButton addCarBtn = Theme.button("Add new car", Theme.DARK);
             addCarBtn.addActionListener(e -> tabs.setSelectedIndex(3));
             bottom.add(addRentalBtn);
             bottom.add(addCarBtn);
         } else {
-            JButton returnBtn = new JButton("Return selected vehicle");
+            JButton returnBtn = Theme.button("Return selected vehicle", Theme.SUCCESS);
             returnBtn.addActionListener(e -> {
                 int row = rentalTable.getSelectedRow();
                 if (row == -1) {
@@ -243,7 +264,7 @@ public class DashboardFrame extends JFrame {
             bottom.add(returnBtn);
         }
 
-        JButton refresh = new JButton("Refresh");
+        JButton refresh = Theme.button("Refresh", Theme.DARK);
         refresh.addActionListener(e -> {
             refreshVehicles();
             refreshRentals();
@@ -269,15 +290,14 @@ public class DashboardFrame extends JFrame {
 
     // ---------- Add Vehicle tab (admin only) ----------
     private JPanel buildAddTab() {
-        JPanel p = new JPanel(new GridLayout(6, 2, 8, 8));
-        p.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
+        JPanel p = formPanel(6);
 
         JComboBox<String> typeBox = new JComboBox<>(new String[] { "Car", "SUV", "Luxury" });
         JTextField idField = new JTextField();
         JTextField brandField = new JTextField();
         JTextField modelField = new JTextField();
         JTextField rateField = new JTextField();
-        JButton addBtn = new JButton("Add vehicle");
+        JButton addBtn = Theme.button("Add vehicle");
 
         p.add(new JLabel("Type:"));
         p.add(typeBox);
